@@ -18,6 +18,7 @@ from mathhpc.foundation import (
     ContractNumeric,
     DecisionId,
     Equivalence,
+    EventId,
     Evidence,
     EvidenceId,
     ExceptionProfile,
@@ -162,7 +163,7 @@ def _evidence_statuses() -> st.SearchStrategy[object]:
         st.builds(StaticallyDerived, rule=_NAMES),
         st.builds(SmtProved, solver=_NAMES, artifact=_artifact_refs()),
         st.builds(FormallyProved, system=_NAMES, artifact=_artifact_refs()),
-        st.builds(RuntimeChecked, guard=_U64.map(GuardId), when=st.integers(min_value=0)),
+        st.builds(RuntimeChecked, guard=_U64.map(GuardId), when=_U64.map(EventId)),
         st.builds(Measured, machine=_NAMES, n=st.integers(min_value=1, max_value=10**6), ci=ci),
         st.builds(Predicted, model=_NAMES, calib=_NAMES),
         st.builds(AiInferred, model=_NAMES, score=st.floats(min_value=0.0, max_value=1.0)),
@@ -236,6 +237,7 @@ def serialization_strategies() -> dict[type, st.SearchStrategy[object]]:
             rounding=st.sampled_from(RoundingMode),
         ),
         GuardId: _U64.map(GuardId),
+        EventId: _U64.map(EventId),
         ArtifactRef: _artifact_refs(),
         Universal: st.builds(Universal),
         Value: st.builds(Value, ref=_NAMES),
@@ -251,9 +253,7 @@ def serialization_strategies() -> dict[type, st.SearchStrategy[object]]:
         StaticallyDerived: st.builds(StaticallyDerived, rule=_NAMES),
         SmtProved: st.builds(SmtProved, solver=_NAMES, artifact=_artifact_refs()),
         FormallyProved: st.builds(FormallyProved, system=_NAMES, artifact=_artifact_refs()),
-        RuntimeChecked: st.builds(
-            RuntimeChecked, guard=_U64.map(GuardId), when=st.integers(min_value=0)
-        ),
+        RuntimeChecked: st.builds(RuntimeChecked, guard=_U64.map(GuardId), when=_U64.map(EventId)),
         Measured: st.builds(
             Measured,
             machine=_NAMES,

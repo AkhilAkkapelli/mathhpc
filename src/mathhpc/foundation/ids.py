@@ -6,8 +6,10 @@ separation these types exist to provide. The six-line pattern is duplicated on
 purpose; every ID type copies it and registers itself the same way. Task 001
 shipped ``ClaimId``/``EvidenceId``; Task 002 adds ``DecisionId``, ``PlanId``,
 ``ContractId`` (the remaining IDs of spec §7 line "opaque u64"); Task 003 adds
-``GuardId`` alongside the ``RuntimeChecked`` evidence status that references it.
-Later record IDs (``HirId``, …) arrive in the PR introducing their record.
+``GuardId`` and ``EventId`` alongside the ``RuntimeChecked`` evidence status that
+references them (``EventId`` is the runtime-event identity that ``Window`` bounds
+also use, spec §7). Later record IDs (``HirId``, …) arrive in the PR introducing
+their record.
 
 IDs are identities, not quantities: equality is kind + value, hashing mixes the
 kind, and ordering does not exist. JSON serialization goes through the Task 002
@@ -19,7 +21,7 @@ from typing import ClassVar, Final
 
 from mathhpc.foundation.registry import register_frozen_type
 
-__all__ = ["ClaimId", "ContractId", "DecisionId", "EvidenceId", "GuardId", "PlanId"]
+__all__ = ["ClaimId", "ContractId", "DecisionId", "EventId", "EvidenceId", "GuardId", "PlanId"]
 
 _U64_MAX: Final = 2**64 - 1
 
@@ -135,6 +137,29 @@ class ContractId:
 
 
 @dataclass(frozen=True, slots=True)
+class EventId:
+    """Opaque identity of a runtime event (referenced by ``RuntimeChecked.when``;
+    ``Window`` scope bounds use the same identity space, spec §7)."""
+
+    value: int
+    _KIND: ClassVar[str] = "EventId"
+
+    def __post_init__(self) -> None:
+        if type(self.value) is not int:
+            raise TypeError(
+                f"{self._KIND}.value must be int (exactly), got {type(self.value).__qualname__}"
+            )
+        if not 0 <= self.value <= _U64_MAX:
+            raise ValueError(f"{self._KIND}.value out of u64 range: {self.value}")
+
+    def __hash__(self) -> int:
+        return hash((self._KIND, self.value))
+
+    def __repr__(self) -> str:
+        return f"{self._KIND}({self.value})"
+
+
+@dataclass(frozen=True, slots=True)
 class GuardId:
     """Opaque identity of a runtime Guard (referenced by ``RuntimeChecked`` evidence;
     the Guard record itself arrives with the Plan IR / guard-library tasks)."""
@@ -185,5 +210,10 @@ register_frozen_type(
 register_frozen_type(
     GuardId,
     fixture=lambda: (GuardId(0), GuardId(0), GuardId(23)),
+    schema_version=1,
+)
+register_frozen_type(
+    EventId,
+    fixture=lambda: (EventId(0), EventId(0), EventId(29)),
     schema_version=1,
 )

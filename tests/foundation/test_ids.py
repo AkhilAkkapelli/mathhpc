@@ -4,7 +4,7 @@ from typing import cast
 
 import pytest
 
-from mathhpc.foundation import ClaimId, EvidenceId, FrozenDict
+from mathhpc.foundation import ClaimId, EventId, EvidenceId, FrozenDict, GuardId
 from tests.foundation.fixtures import ExampleRecord
 
 
@@ -13,6 +13,12 @@ def test_claim_id_not_equal_to_evidence_id() -> None:
     assert (ClaimId(1) == EvidenceId(1)) is False
     assert ClaimId(1) == ClaimId(1)
     assert ClaimId(1) != ClaimId(2)
+
+
+def test_event_id_not_equal_to_guard_id() -> None:
+    assert EventId(1) != GuardId(1)
+    assert (EventId(1) == GuardId(1)) is False
+    assert EventId(1) == EventId(1)
 
 
 def test_id_value_exact_int_bool_rejected() -> None:

@@ -13,6 +13,7 @@ from mathhpc.foundation import (
     Assumed,
     Bundled,
     ClaimId,
+    EventId,
     Evidence,
     EvidenceId,
     EvidenceStatus,
@@ -72,7 +73,7 @@ def _one_of_each_status() -> tuple[EvidenceStatus, ...]:
         StaticallyDerived("spd_implies_symmetric"),
         SmtProved("z3", EMPTY_ARTIFACT),
         FormallyProved("lean4", EMPTY_ARTIFACT),
-        RuntimeChecked(GuardId(1), 0),
+        RuntimeChecked(GuardId(1), EventId(0)),
         Measured("topo:ab12", 200, (0.9, 1.1)),
         Predicted("cost-v0", "calib-2026-07"),
         AiInferred("proposer-v0", 0.5),
@@ -126,11 +127,11 @@ def test_no_scores_on_proof_classes() -> None:
 
 def test_runtime_checked_validation() -> None:
     with pytest.raises(TypeError, match="must be GuardId"):
-        RuntimeChecked(ClaimId(1), 0)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
-    with pytest.raises(TypeError, match="must be int"):
-        RuntimeChecked(GuardId(1), True)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
-    with pytest.raises(ValueError, match=">= 0"):
-        RuntimeChecked(GuardId(1), -1)
+        RuntimeChecked(ClaimId(1), EventId(0))  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+    with pytest.raises(TypeError, match="must be EventId"):
+        RuntimeChecked(GuardId(1), 0)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+    with pytest.raises(TypeError, match="must be EventId"):
+        RuntimeChecked(GuardId(1), ClaimId(0))  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
 
 
 def test_measured_validation() -> None:

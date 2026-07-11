@@ -27,7 +27,7 @@ import math
 from dataclasses import dataclass
 
 from mathhpc.foundation.artifact import EMPTY_ARTIFACT, ArtifactRef
-from mathhpc.foundation.ids import ClaimId, EvidenceId, GuardId
+from mathhpc.foundation.ids import ClaimId, EventId, EvidenceId, GuardId
 from mathhpc.foundation.immutable import validate_frozen_instance
 from mathhpc.foundation.registry import register_frozen_type
 from mathhpc.foundation.scope import ANY_VALIDITY, Scope, Universal, Validity, Value
@@ -153,11 +153,12 @@ class FormallyProved:
 
 @dataclass(frozen=True, slots=True)
 class RuntimeChecked:
-    """Established by a guard at execution; ``when`` is the monotone event ordinal
-    of the check (richer runtime event identity arrives with the runtime tasks)."""
+    """Established by a guard at execution; ``when`` is the identity of the runtime
+    event at which the check ran — the same event space ``Window`` scope bounds
+    index (spec §7)."""
 
     guard: GuardId
-    when: int
+    when: EventId
 
     def __post_init__(self) -> None:
         validate_frozen_instance(self)
@@ -165,10 +166,10 @@ class RuntimeChecked:
             raise TypeError(
                 f"RuntimeChecked.guard must be GuardId, got {type(self.guard).__qualname__}"
             )
-        if type(self.when) is not int:
-            raise TypeError(f"RuntimeChecked.when must be int, got {type(self.when).__qualname__}")
-        if self.when < 0:
-            raise ValueError(f"RuntimeChecked.when must be >= 0, got {self.when}")
+        if type(self.when) is not EventId:
+            raise TypeError(
+                f"RuntimeChecked.when must be EventId, got {type(self.when).__qualname__}"
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -424,9 +425,9 @@ register_frozen_type(
 register_frozen_type(
     RuntimeChecked,
     fixture=lambda: (
-        RuntimeChecked(GuardId(1), 0),
-        RuntimeChecked(GuardId(1), 0),
-        RuntimeChecked(GuardId(2), 41),
+        RuntimeChecked(GuardId(1), EventId(0)),
+        RuntimeChecked(GuardId(1), EventId(0)),
+        RuntimeChecked(GuardId(2), EventId(41)),
     ),
     schema_version=1,
 )
