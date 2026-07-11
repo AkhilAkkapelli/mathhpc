@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "mathhpc"
 version = "0.0.1"
-description = "Math-first, evidence-driven HPC compiler — Foundation v1.0 immutable substrate (Task 001)"
+description = "Math-first, evidence-driven HPC compiler — Foundation v1.0"
 requires-python = ">=3.12"
 dependencies = []
 

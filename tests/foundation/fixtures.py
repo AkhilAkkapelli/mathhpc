@@ -2,9 +2,19 @@
 
 from dataclasses import dataclass
 
-from mathhpc.foundation import ClaimId, FrozenDict, register_frozen_type, validate_frozen_instance
+from mathhpc.foundation import (
+    ClaimId,
+    ContractId,
+    ContractNumeric,
+    FrozenDict,
+    MathematicalReal,
+    RoundingMode,
+    SemanticDomain,
+    register_frozen_type,
+    validate_frozen_instance,
+)
 
-__all__ = ["Box", "ExampleNested", "ExampleRecord"]
+__all__ = ["Box", "ExampleNested", "ExampleRecord", "SerializationProbe"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,6 +57,31 @@ class ExampleNested:
         validate_frozen_instance(self)
 
 
+@dataclass(frozen=True, slots=True)
+class SerializationProbe:
+    """Exercises the serializer's edge encodings: float (incl. infinities), bytes,
+    an optional field, an enum field, and a tagged-union (``SemanticDomain``) field."""
+
+    ratio: float
+    blob: bytes
+    domain: SemanticDomain
+    note: int | None
+    rounding: RoundingMode
+
+    def __post_init__(self) -> None:
+        validate_frozen_instance(self)
+        if type(self.ratio) is not float:
+            raise TypeError(f"ratio must be float, got {type(self.ratio).__qualname__}")
+        if type(self.blob) is not bytes:
+            raise TypeError(f"blob must be bytes, got {type(self.blob).__qualname__}")
+        if self.note is not None and type(self.note) is not int:
+            raise TypeError(f"note must be int or None, got {type(self.note).__qualname__}")
+        if type(self.rounding) is not RoundingMode:
+            raise TypeError(
+                f"rounding must be RoundingMode, got {type(self.rounding).__qualname__}"
+            )
+
+
 def _example_records() -> tuple[object, ...]:
     first = ExampleRecord(ClaimId(1), "alpha", FrozenDict({"x": 1, "y": 2}), ("t1", "t2"))
     duplicate = ExampleRecord(ClaimId(1), "alpha", FrozenDict({"x": 1, "y": 2}), ("t1", "t2"))
@@ -63,5 +98,18 @@ def _example_nested() -> tuple[object, ...]:
     )
 
 
-register_frozen_type(ExampleRecord, fixture=_example_records)
-register_frozen_type(ExampleNested, fixture=_example_nested)
+def _serialization_probes() -> tuple[object, ...]:
+    real = MathematicalReal()
+    return (
+        SerializationProbe(0.5, b"\x00\x01", real, 7, RoundingMode.RNE),
+        SerializationProbe(0.5, b"\x00\x01", real, 7, RoundingMode.RNE),
+        SerializationProbe(
+            float("inf"), b"", ContractNumeric(ContractId(3)), None, RoundingMode.RTZ
+        ),
+        SerializationProbe(float("-inf"), b"z", real, 0, RoundingMode.RUP),
+    )
+
+
+register_frozen_type(ExampleRecord, fixture=_example_records, schema_version=1)
+register_frozen_type(ExampleNested, fixture=_example_nested, schema_version=1)
+register_frozen_type(SerializationProbe, fixture=_serialization_probes, schema_version=1)
