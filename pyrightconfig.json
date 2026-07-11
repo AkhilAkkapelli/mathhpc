@@ -1,0 +1,7 @@
+{
+    "typeCheckingMode": "strict",
+    "pythonVersion": "3.12",
+    "include": ["src", "tests"],
+    "exclude": ["tests/typecheck/invalid_id_assignment.py", "**/__pycache__", ".venv"],
+    "extraPaths": ["src", "."]
+}
