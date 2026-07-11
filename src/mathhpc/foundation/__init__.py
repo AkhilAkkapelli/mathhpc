@@ -1,5 +1,14 @@
-"""Public API of the Foundation v1.0 substrate (Tasks 001–002)."""
+"""Public API of the Foundation v1.0 substrate (Tasks 001–003)."""
 
+from mathhpc.foundation.artifact import EMPTY_ARTIFACT, ArtifactRef
+from mathhpc.foundation.claims import (
+    Claim,
+    ClaimKey,
+    Equivalence,
+    Property,
+    PropertyName,
+    Statement,
+)
 from mathhpc.foundation.domains import (
     IEEE754,
     ContractNumeric,
@@ -12,7 +21,31 @@ from mathhpc.foundation.domains import (
     RoundingMode,
     SemanticDomain,
 )
-from mathhpc.foundation.ids import ClaimId, ContractId, DecisionId, EvidenceId, PlanId
+from mathhpc.foundation.evidence import (
+    AiInferred,
+    Assumed,
+    Bundled,
+    Evidence,
+    EvidenceStatus,
+    FormallyProved,
+    Measured,
+    Predicted,
+    RuntimeChecked,
+    SmtProved,
+    Specified,
+    SpecProvenance,
+    StaticallyDerived,
+    specified_evidence,
+    statically_derived_evidence,
+)
+from mathhpc.foundation.ids import (
+    ClaimId,
+    ContractId,
+    DecisionId,
+    EvidenceId,
+    GuardId,
+    PlanId,
+)
 from mathhpc.foundation.immutable import (
     FrozenDict,
     MutableFieldError,
@@ -20,6 +53,15 @@ from mathhpc.foundation.immutable import (
     validate_frozen_instance,
 )
 from mathhpc.foundation.registry import register_frozen_type, registered_frozen_types
+from mathhpc.foundation.scope import (
+    ANY_VALIDITY,
+    DataExtent,
+    ProgramExtent,
+    Scope,
+    Universal,
+    Validity,
+    Value,
+)
 from mathhpc.foundation.serialize import (
     SerializationError,
     canonical_json_bytes,
@@ -30,31 +72,62 @@ from mathhpc.foundation.serialize import (
 from mathhpc.foundation.span import SourceSpan
 
 __all__ = [
+    "ANY_VALIDITY",
+    "EMPTY_ARTIFACT",
     "IEEE754",
+    "AiInferred",
+    "ArtifactRef",
+    "Assumed",
+    "Bundled",
+    "Claim",
     "ClaimId",
+    "ClaimKey",
     "ContractId",
     "ContractNumeric",
+    "DataExtent",
     "DecisionId",
+    "Equivalence",
+    "Evidence",
     "EvidenceId",
+    "EvidenceStatus",
     "ExceptionProfile",
+    "FormallyProved",
     "FpFormat",
     "FrozenDict",
+    "GuardId",
     "IntegerExact",
     "MathematicalComplex",
     "MathematicalReal",
+    "Measured",
     "MutableFieldError",
     "OverflowBehavior",
     "PlanId",
+    "Predicted",
+    "ProgramExtent",
+    "Property",
+    "PropertyName",
     "RoundingMode",
+    "RuntimeChecked",
+    "Scope",
     "SemanticDomain",
     "SerializationError",
+    "SmtProved",
     "SourceSpan",
+    "SpecProvenance",
+    "Specified",
+    "StaticallyDerived",
+    "Statement",
+    "Universal",
+    "Validity",
+    "Value",
     "assert_deeply_immutable",
     "canonical_json_bytes",
     "from_json",
     "register_frozen_type",
     "register_schema_migration",
     "registered_frozen_types",
+    "specified_evidence",
+    "statically_derived_evidence",
     "to_json",
     "validate_frozen_instance",
 ]

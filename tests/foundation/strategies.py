@@ -1,5 +1,5 @@
-"""Hypothesis strategies for the Task 001 property suite and the Task 002
-JSON round-trip suite (invariant 4)."""
+"""Hypothesis strategies for the Task 001 property suite and the JSON round-trip
+suite (invariant 4, Tasks 002–003)."""
 
 from collections.abc import Callable
 
@@ -7,21 +7,43 @@ import hypothesis.strategies as st
 
 from mathhpc.foundation import (
     IEEE754,
+    AiInferred,
+    ArtifactRef,
+    Assumed,
+    Bundled,
+    Claim,
     ClaimId,
+    ClaimKey,
     ContractId,
     ContractNumeric,
     DecisionId,
+    Equivalence,
+    Evidence,
     EvidenceId,
     ExceptionProfile,
+    FormallyProved,
     FpFormat,
     FrozenDict,
+    GuardId,
     IntegerExact,
     MathematicalComplex,
     MathematicalReal,
+    Measured,
     OverflowBehavior,
     PlanId,
+    Predicted,
+    Property,
+    PropertyName,
     RoundingMode,
+    RuntimeChecked,
+    Scope,
+    SmtProved,
     SourceSpan,
+    Specified,
+    StaticallyDerived,
+    Universal,
+    Validity,
+    Value,
 )
 from tests.foundation.fixtures import Box, ExampleNested, ExampleRecord, SerializationProbe
 
@@ -96,6 +118,74 @@ def _semantic_domains() -> st.SearchStrategy[object]:
     )
 
 
+_NAMES = st.text(min_size=1, max_size=8)
+
+
+def _artifact_refs() -> st.SearchStrategy[ArtifactRef]:
+    return st.binary(max_size=12).map(ArtifactRef.of)
+
+
+def _scopes() -> st.SearchStrategy[Scope]:
+    return st.builds(Scope, extent=st.builds(Universal), at=st.builds(Value, ref=_NAMES))
+
+
+def _validities() -> st.SearchStrategy[Validity]:
+    pin = st.none() | st.text(alphabet="0123456789abcdef", min_size=4, max_size=8)
+    return st.builds(Validity, topo=pin, module=pin)
+
+
+def _statements() -> st.SearchStrategy[object]:
+    return st.one_of(
+        st.builds(Property, subject=_NAMES, prop=st.sampled_from(PropertyName)),
+        st.builds(Equivalence, lhs=_NAMES, rhs=_NAMES),
+    )
+
+
+@st.composite
+def _claim_keys(draw: st.DrawFn) -> ClaimKey:
+    stmt = draw(_statements())
+    if isinstance(stmt, Equivalence):
+        domain = draw(_semantic_domains())
+    else:
+        domain = draw(st.none() | _semantic_domains())
+    return ClaimKey(stmt, domain)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+
+
+def _evidence_statuses() -> st.SearchStrategy[object]:
+    ci = st.tuples(
+        st.floats(allow_nan=False, allow_infinity=False),
+        st.floats(allow_nan=False, allow_infinity=False),
+    ).map(lambda pair: (min(pair), max(pair)))
+    return st.one_of(
+        st.builds(Assumed, who=_NAMES),
+        st.builds(Specified, pack=_NAMES, provenance=st.builds(Bundled)),
+        st.builds(StaticallyDerived, rule=_NAMES),
+        st.builds(SmtProved, solver=_NAMES, artifact=_artifact_refs()),
+        st.builds(FormallyProved, system=_NAMES, artifact=_artifact_refs()),
+        st.builds(RuntimeChecked, guard=_U64.map(GuardId), when=st.integers(min_value=0)),
+        st.builds(Measured, machine=_NAMES, n=st.integers(min_value=1, max_value=10**6), ci=ci),
+        st.builds(Predicted, model=_NAMES, calib=_NAMES),
+        st.builds(AiInferred, model=_NAMES, score=st.floats(min_value=0.0, max_value=1.0)),
+    )
+
+
+@st.composite
+def _evidence(draw: st.DrawFn) -> Evidence:
+    own = draw(_U64.map(EvidenceId))
+    provenance = tuple(
+        ref for ref in draw(st.lists(_U64.map(EvidenceId), max_size=3)) if ref != own
+    )
+    return Evidence(
+        id=own,
+        claim=draw(_U64.map(ClaimId)),
+        status=draw(_evidence_statuses()),  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+        provenance=provenance,
+        scope=draw(_scopes()),
+        validity=draw(_validities()),
+        artifact=draw(_artifact_refs()),
+    )
+
+
 def serialization_strategies() -> dict[type, st.SearchStrategy[object]]:
     """Per-type instance strategies for the JSON round-trip invariant (invariant 4).
 
@@ -145,6 +235,39 @@ def serialization_strategies() -> dict[type, st.SearchStrategy[object]]:
             note=st.none() | st.integers(),
             rounding=st.sampled_from(RoundingMode),
         ),
+        GuardId: _U64.map(GuardId),
+        ArtifactRef: _artifact_refs(),
+        Universal: st.builds(Universal),
+        Value: st.builds(Value, ref=_NAMES),
+        Scope: _scopes(),
+        Validity: _validities(),
+        Property: st.builds(Property, subject=_NAMES, prop=st.sampled_from(PropertyName)),
+        Equivalence: st.builds(Equivalence, lhs=_NAMES, rhs=_NAMES),
+        ClaimKey: _claim_keys(),
+        Claim: st.builds(Claim, id=_U64.map(ClaimId), key=_claim_keys(), scope=_scopes()),
+        Bundled: st.builds(Bundled),
+        Assumed: st.builds(Assumed, who=_NAMES),
+        Specified: st.builds(Specified, pack=_NAMES, provenance=st.builds(Bundled)),
+        StaticallyDerived: st.builds(StaticallyDerived, rule=_NAMES),
+        SmtProved: st.builds(SmtProved, solver=_NAMES, artifact=_artifact_refs()),
+        FormallyProved: st.builds(FormallyProved, system=_NAMES, artifact=_artifact_refs()),
+        RuntimeChecked: st.builds(
+            RuntimeChecked, guard=_U64.map(GuardId), when=st.integers(min_value=0)
+        ),
+        Measured: st.builds(
+            Measured,
+            machine=_NAMES,
+            n=st.integers(min_value=1, max_value=10**6),
+            ci=st.tuples(
+                st.floats(allow_nan=False, allow_infinity=False),
+                st.floats(allow_nan=False, allow_infinity=False),
+            ).map(lambda pair: (min(pair), max(pair))),
+        ),
+        Predicted: st.builds(Predicted, model=_NAMES, calib=_NAMES),
+        AiInferred: st.builds(
+            AiInferred, model=_NAMES, score=st.floats(min_value=0.0, max_value=1.0)
+        ),
+        Evidence: _evidence(),
     }
 
 
