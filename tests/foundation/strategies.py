@@ -7,6 +7,11 @@ import hypothesis.strategies as st
 
 from mathhpc.foundation import (
     IEEE754,
+    A1IeeeStrict,
+    A2BoundedError,
+    A3BackwardStable,
+    A4Statistical,
+    A5BestEffort,
     AiInferred,
     ArtifactRef,
     Assumed,
@@ -14,9 +19,11 @@ from mathhpc.foundation import (
     Claim,
     ClaimId,
     ClaimKey,
+    Contract,
     ContractId,
     ContractNumeric,
     DecisionId,
+    Determinism,
     Equivalence,
     Established,
     EventId,
@@ -24,6 +31,7 @@ from mathhpc.foundation import (
     EvidenceId,
     ExceptionProfile,
     FormallyProved,
+    FpFeature,
     FpFormat,
     FrozenDict,
     GuardId,
@@ -31,6 +39,7 @@ from mathhpc.foundation import (
     MathematicalComplex,
     MathematicalReal,
     Measured,
+    NormKind,
     OverflowBehavior,
     PlanId,
     Predicted,
@@ -286,6 +295,23 @@ def serialization_strategies() -> dict[type, st.SearchStrategy[object]]:
         Established: st.builds(Established, strongest=proof_statuses()),
         Refuted: st.builds(Refuted, by=_U64.map(EvidenceId)),
         Unknown: st.builds(Unknown, hypothesized=st.none() | _U64.map(EvidenceId)),
+        A1IeeeStrict: st.builds(A1IeeeStrict),
+        A2BoundedError: st.builds(A2BoundedError, eps=_NAMES, norm=st.sampled_from(NormKind)),
+        A3BackwardStable: st.builds(A3BackwardStable, cls=_NAMES),
+        A4Statistical: st.builds(A4Statistical, test=_NAMES, tol=_NAMES),
+        A5BestEffort: st.builds(A5BestEffort),
+        Contract: st.builds(
+            Contract,
+            det=st.sampled_from(Determinism),
+            acc=st.one_of(
+                st.builds(A1IeeeStrict),
+                st.builds(A2BoundedError, eps=_NAMES, norm=st.sampled_from(NormKind)),
+                st.builds(A3BackwardStable, cls=_NAMES),
+                st.builds(A4Statistical, test=_NAMES, tol=_NAMES),
+                st.builds(A5BestEffort),
+            ),
+            exc=st.frozensets(st.sampled_from(FpFeature)),
+        ),
     }
 
 
