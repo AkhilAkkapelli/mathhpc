@@ -8,22 +8,29 @@ from mathhpc.foundation import (
     AiInferred,
     ArtifactRef,
     Assumed,
+    Bundled,
     Claim,
     ClaimId,
     ClaimKey,
     ContestedConflictError,
     Established,
+    EventId,
     Evidence,
     EvidenceId,
+    EvidenceStatus,
     FormallyProved,
     FoundationStore,
+    GuardId,
     InMemoryFoundationStore,
     MathematicalReal,
     Measured,
     Property,
     PropertyName,
     Refuted,
+    RuntimeChecked,
     Scope,
+    SmtProved,
+    Specified,
     StaticallyDerived,
     Universal,
     Unknown,
@@ -31,6 +38,7 @@ from mathhpc.foundation import (
     Value,
     specified_evidence,
 )
+from mathhpc.foundation.claim_state import PROOF_CLASS
 
 _KEY = ClaimKey(Property("A", PropertyName.SYMMETRIC), MathematicalReal())
 _SCOPE = Scope(Universal(), Value("A"))
@@ -139,6 +147,38 @@ def test_established_records_strongest_status() -> None:
     store.append(_ev(3, StaticallyDerived("r")))
     state = store.state(_KEY, _SCOPE, store.snapshot())
     assert state == Established(FormallyProved("lean4", EMPTY_ARTIFACT))
+
+
+_CANONICAL_EXAMPLES: dict[type[object], EvidenceStatus] = {
+    FormallyProved: FormallyProved("lean4", EMPTY_ARTIFACT),
+    SmtProved: SmtProved("z3", EMPTY_ARTIFACT),
+    StaticallyDerived: StaticallyDerived("r"),
+    RuntimeChecked: RuntimeChecked(GuardId(1), EventId(0)),
+    Specified: Specified("blas-reference", Bundled()),
+    Assumed: Assumed("user"),
+}
+
+
+@pytest.mark.parametrize(
+    ("higher", "lower"),
+    list(zip(PROOF_CLASS, PROOF_CLASS[1:], strict=False)),
+    ids=[
+        f"{h.__name__}-over-{lw.__name__}"
+        for h, lw in zip(PROOF_CLASS, PROOF_CLASS[1:], strict=False)
+    ],
+)
+def test_canonical_order_pins_established_representative(
+    higher: type[object], lower: type[object]
+) -> None:
+    """The canonical representative-selection order — not EvidenceId order and
+    not append order — determines Established.strongest when proof-class
+    statuses differ. The canonically lower status gets the smaller id and is
+    appended first; the higher status must still be recorded."""
+    store = _store()
+    store.append(_ev(1, _CANONICAL_EXAMPLES[lower]))
+    store.append(_ev(2, _CANONICAL_EXAMPLES[higher]))
+    state = store.state(_KEY, _SCOPE, store.snapshot())
+    assert state == Established(_CANONICAL_EXAMPLES[higher])
 
 
 def test_established_strength_ties_break_by_least_evidence_id() -> None:

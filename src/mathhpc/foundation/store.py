@@ -20,16 +20,22 @@ Fold v0 (three states; v3.1 §5.1 rules 2/3/6, restricted per Addendum A1 §6.3)
    contributes nothing at all).
 
 Deterministic set functions (permutation invariance is the Task 004 acceptance):
-``strongest`` = highest ladder strength, ties broken by least ``EvidenceId``
+``strongest`` = highest canonical rank, ties broken by least ``EvidenceId``
 value; ``Refuted.by`` and ``Unknown.hypothesized`` = least ``EvidenceId`` value
 of their class; the conflict pair = (least proof id, least refutation id).
 
-The strength ladder over proof-class statuses is **implementation-local** (the
-frozen docs mandate "strongest" but define no total order — v2 §7.2 refuses one
-that embeds hypothesis-class): FormallyProved > SmtProved > StaticallyDerived >
-RuntimeChecked > Specified > Assumed — machine-checked proof above solver proof
-above audited rule application above in-window runtime check above trusted
-specification above unverified user trust.
+The canonical proof-class order (FormallyProved > SmtProved > StaticallyDerived
+> RuntimeChecked > Specified > Assumed) is a **representative-selection order**,
+pinned only so that ``Established{strongest}`` is a deterministic, reproducible
+function of the evidence set in the current three-state fold. It is **not** a
+universal epistemic ranking of evidence statuses: ``EvidenceStatus`` remains a
+sum type, not a confidence or strength scalar (v2 §7.2), and epistemically
+meaningful comparison of evidence is gate-relative — it depends on admissibility
+(v2 §7.3), claim kind, semantic domain, scope, and trust policy. Later
+gate-specific admissibility logic must not use ``_CANONICAL_PROOF_RANK`` as a
+substitute for its own rules. Changing this canonical order is a deliberate,
+observable change to fold output and reproducibility — never a redefinition of
+epistemic truth.
 
 v0 deferrals (coverage, never discipline):
 - Liveness (validity expiry, kill events, demotion supersession) — Tasks 013/024;
@@ -70,7 +76,9 @@ __all__ = [
 
 type Epoch = int
 
-_STRENGTH: dict[type[object], int] = {
+# Do not use this order for gate admissibility or epistemic comparison; those
+# are context-dependent.
+_CANONICAL_PROOF_RANK: dict[type[object], int] = {
     cls: rank for rank, cls in enumerate(reversed(PROOF_CLASS), 1)
 }
 
@@ -209,4 +217,4 @@ def _least_id(records: list[Evidence]) -> EvidenceId:
 
 
 def _strongest(proofs: list[Evidence]) -> Evidence:
-    return min(proofs, key=lambda ev: (-_STRENGTH[type(ev.status)], ev.id.value))
+    return min(proofs, key=lambda ev: (-_CANONICAL_PROOF_RANK[type(ev.status)], ev.id.value))
