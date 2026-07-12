@@ -18,6 +18,7 @@ from mathhpc.foundation import (
     ContractNumeric,
     DecisionId,
     Equivalence,
+    Established,
     EventId,
     Evidence,
     EvidenceId,
@@ -35,6 +36,7 @@ from mathhpc.foundation import (
     Predicted,
     Property,
     PropertyName,
+    Refuted,
     RoundingMode,
     RuntimeChecked,
     Scope,
@@ -43,12 +45,13 @@ from mathhpc.foundation import (
     Specified,
     StaticallyDerived,
     Universal,
+    Unknown,
     Validity,
     Value,
 )
 from tests.foundation.fixtures import Box, ExampleNested, ExampleRecord, SerializationProbe
 
-__all__ = ["contaminated", "immutable_values", "serialization_strategies"]
+__all__ = ["contaminated", "immutable_values", "proof_statuses", "serialization_strategies"]
 
 
 def _leaves() -> st.SearchStrategy[object]:
@@ -150,6 +153,18 @@ def _claim_keys(draw: st.DrawFn) -> ClaimKey:
     else:
         domain = draw(st.none() | _semantic_domains())
     return ClaimKey(stmt, domain)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+
+
+def proof_statuses() -> st.SearchStrategy[object]:
+    """Proof-class statuses only (v3.1 §5.1 rule 3) — what Established may record."""
+    return st.one_of(
+        st.builds(FormallyProved, system=_NAMES, artifact=_artifact_refs()),
+        st.builds(SmtProved, solver=_NAMES, artifact=_artifact_refs()),
+        st.builds(StaticallyDerived, rule=_NAMES),
+        st.builds(RuntimeChecked, guard=_U64.map(GuardId), when=_U64.map(EventId)),
+        st.builds(Specified, pack=_NAMES, provenance=st.builds(Bundled)),
+        st.builds(Assumed, who=_NAMES),
+    )
 
 
 def _evidence_statuses() -> st.SearchStrategy[object]:
@@ -268,6 +283,9 @@ def serialization_strategies() -> dict[type, st.SearchStrategy[object]]:
             AiInferred, model=_NAMES, score=st.floats(min_value=0.0, max_value=1.0)
         ),
         Evidence: _evidence(),
+        Established: st.builds(Established, strongest=proof_statuses()),
+        Refuted: st.builds(Refuted, by=_U64.map(EvidenceId)),
+        Unknown: st.builds(Unknown, hypothesized=st.none() | _U64.map(EvidenceId)),
     }
 
 
