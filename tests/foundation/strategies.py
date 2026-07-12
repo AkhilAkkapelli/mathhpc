@@ -15,6 +15,7 @@ from mathhpc.foundation import (
     AiInferred,
     ArtifactRef,
     Assumed,
+    Auto,
     Bundled,
     Claim,
     ClaimId,
@@ -22,6 +23,7 @@ from mathhpc.foundation import (
     Contract,
     ContractId,
     ContractNumeric,
+    Decision,
     DecisionId,
     Determinism,
     Equivalence,
@@ -43,9 +45,12 @@ from mathhpc.foundation import (
     OverflowBehavior,
     PlanId,
     Predicted,
+    Prefer,
+    PriorityClass,
     Property,
     PropertyName,
     Refuted,
+    Require,
     RoundingMode,
     RuntimeChecked,
     Scope,
@@ -55,6 +60,7 @@ from mathhpc.foundation import (
     StaticallyDerived,
     Universal,
     Unknown,
+    Use,
     Validity,
     Value,
 )
@@ -173,6 +179,44 @@ def proof_statuses() -> st.SearchStrategy[object]:
         st.builds(RuntimeChecked, guard=_U64.map(GuardId), when=_U64.map(EventId)),
         st.builds(Specified, pack=_NAMES, provenance=st.builds(Bundled)),
         st.builds(Assumed, who=_NAMES),
+    )
+
+
+def _claim_states() -> st.SearchStrategy[object]:
+    return st.one_of(
+        st.builds(Established, strongest=proof_statuses()),
+        st.builds(Refuted, by=_U64.map(EvidenceId)),
+        st.builds(Unknown, hypothesized=st.none() | _U64.map(EvidenceId)),
+    )
+
+
+def _decision_controls() -> st.SearchStrategy[object]:
+    params = st.dictionaries(_NAMES, _NAMES, max_size=3).map(FrozenDict)
+    return st.one_of(
+        st.builds(Auto),
+        st.builds(
+            Prefer,
+            value=_NAMES,
+            cls=st.sampled_from(PriorityClass),
+            rank=st.none() | st.integers(min_value=1, max_value=16),
+        ),
+        st.builds(Require, value=_NAMES),
+        st.builds(Use, value=_NAMES, params=params),
+    )
+
+
+def _decisions() -> st.SearchStrategy[Decision]:
+    depends_on = st.lists(st.tuples(_U64.map(ClaimId), _claim_states()), max_size=4).map(tuple)
+    return st.builds(
+        Decision,
+        id=_U64.map(DecisionId),
+        layer=_NAMES,
+        subject=_NAMES,
+        control=_decision_controls(),  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+        chosen=_NAMES,
+        considered=st.lists(_NAMES, max_size=4).map(tuple),
+        depends_on=depends_on,  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+        epoch=st.integers(min_value=0, max_value=2**32),
     )
 
 
@@ -312,6 +356,18 @@ def serialization_strategies() -> dict[type, st.SearchStrategy[object]]:
             ),
             exc=st.frozensets(st.sampled_from(FpFeature)),
         ),
+        Auto: st.builds(Auto),
+        Prefer: st.builds(
+            Prefer,
+            value=_NAMES,
+            cls=st.sampled_from(PriorityClass),
+            rank=st.none() | st.integers(min_value=1, max_value=16),
+        ),
+        Require: st.builds(Require, value=_NAMES),
+        Use: st.builds(
+            Use, value=_NAMES, params=st.dictionaries(_NAMES, _NAMES, max_size=3).map(FrozenDict)
+        ),
+        Decision: _decisions(),
     }
 
 

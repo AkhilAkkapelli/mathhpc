@@ -1,4 +1,4 @@
-"""Public API of the Foundation v1.0 substrate (Tasks 001–005)."""
+"""Public API of the Foundation v1.0 substrate (Tasks 001–006)."""
 
 from mathhpc.foundation.artifact import EMPTY_ARTIFACT, ArtifactRef
 from mathhpc.foundation.claim_state import (
@@ -33,6 +33,15 @@ from mathhpc.foundation.contracts import (
     NormKind,
     contract_meet,
     exception_profile_features,
+)
+from mathhpc.foundation.decision import (
+    Auto,
+    Decision,
+    DecisionControl,
+    Prefer,
+    PriorityClass,
+    Require,
+    Use,
 )
 from mathhpc.foundation.domains import (
     IEEE754,
@@ -119,6 +128,7 @@ __all__ = [
     "AiInferred",
     "ArtifactRef",
     "Assumed",
+    "Auto",
     "Bundled",
     "Claim",
     "ClaimId",
@@ -130,6 +140,8 @@ __all__ = [
     "ContractMeetError",
     "ContractNumeric",
     "DataExtent",
+    "Decision",
+    "DecisionControl",
     "DecisionId",
     "Determinism",
     "Epoch",
@@ -157,10 +169,13 @@ __all__ = [
     "OverflowBehavior",
     "PlanId",
     "Predicted",
+    "Prefer",
+    "PriorityClass",
     "ProgramExtent",
     "Property",
     "PropertyName",
     "Refuted",
+    "Require",
     "RoundingMode",
     "RuntimeChecked",
     "Scope",
@@ -174,6 +189,7 @@ __all__ = [
     "Statement",
     "Universal",
     "Unknown",
+    "Use",
     "Validity",
     "Value",
     "assert_deeply_immutable",
