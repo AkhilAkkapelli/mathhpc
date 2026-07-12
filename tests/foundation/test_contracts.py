@@ -136,6 +136,19 @@ def test_meet_refuses_distinct_payloads_of_one_accuracy_class() -> None:
         contract_meet(a, b)
 
 
+def test_meet_definedness_is_not_associative() -> None:
+    """Pins the partiality of contract_meet: one association order is defined
+    while the other cannot be evaluated. Future documentation or implementation
+    must not silently pretend contract_meet is total or that definedness is
+    associative."""
+    a = Contract(Determinism.D4_ANY_ORDER, A1IeeeStrict(), frozenset())
+    b = Contract(Determinism.D4_ANY_ORDER, A2BoundedError("x", NormKind.NORMWISE), frozenset())
+    c = Contract(Determinism.D4_ANY_ORDER, A2BoundedError("y", NormKind.NORMWISE), frozenset())
+    assert contract_meet(contract_meet(a, b), c) == a
+    with pytest.raises(ContractMeetError):
+        contract_meet(b, c)
+
+
 # --------------------------------------------------------------------------------------
 # Profile-compatibility gate
 # --------------------------------------------------------------------------------------

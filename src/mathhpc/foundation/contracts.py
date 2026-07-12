@@ -27,12 +27,27 @@ conservative in the safe direction (spec §20 risk table: "reject more"):
 Named profiles (spec §3.1): ``strict = ⟨D2, A1, E1⟩`` (anchor-order-preserving),
 ``faithful = ⟨D2, A2(classical γ-bounds), E2⟩`` (default), ``fast = ⟨D3, A3, E3⟩``.
 
-The E1..E4 feature sets are an implementation-local instantiation of the frozen
-*names* (no frozen document spells the sets out): E1 = all five features (strict
-IEEE environment including observable flags); E2 = {NAN_PROP, INF, SIGNED_ZERO,
-SUBNORMAL} — exactly the adversarial diff-check set the frozen docs tie to the
-E-axis ("NaN, ±Inf, ±0, subnormals — the E-axis features", v3.1 §4); E3 =
-{NAN_PROP, INF} (flush-to-zero and zero-sign freedom); E4 = ∅.
+E1..E4 licensing, classified precisely:
+
+- **Specified by the accepted design**: the five-feature universe
+  {NAN_PROP, INF, SIGNED_ZERO, SUBNORMAL, FP_FLAGS}; the profile *names*
+  E1..E4; exceptional behavior represented as a feature ``frozenset``
+  (spec §7); superset-based satisfaction (spec §12); and the assignment of
+  E1/E2/E3 to strict/faithful/fast respectively (spec §3.1).
+- **Natural structural interpretation** (index order parallel to
+  "D1 strongest … D4 weakest"): nesting E1 ⊇ E2 ⊇ E3 ⊇ E4, with E1 the
+  strongest extreme and E4 the weakest.
+- **Implementation-local choices**: the exact contents of E2 and of E3. The
+  concrete sets implemented here are E1 = all five features; E2 = {NAN_PROP,
+  INF, SIGNED_ZERO, SUBNORMAL}; E3 = {NAN_PROP, INF}; E4 = ∅. The exact E2/E3
+  membership is **not textually fixed by the frozen documents**; these sets are
+  motivated by (not licensed by) the MVP's adversarial diff-check inputs and
+  the unobservability of FP flags in the generated drivers.
+
+Compatibility posture: serialized ``Contract`` values contain the explicit
+feature set, never an E-profile name — so a later revision of a named profile
+constant affects newly constructed contracts only and never reinterprets a
+previously serialized contract.
 
 Task 005 ships the **profile-compatibility gate only** (``Contract.satisfies``);
 the per-transformation gating table of v2 §6.3 is implemented by the tasks that
@@ -129,7 +144,13 @@ class A2BoundedError:
 
 @dataclass(frozen=True, slots=True)
 class A3BackwardStable:
-    """Algorithm-level backward-error guarantee for a named stability class."""
+    """Algorithm-level backward-error guarantee for a named stability class.
+
+    ``cls`` is an opaque token compared only for equality; it does not itself
+    constitute theorem evidence or a discharged numerical guarantee (theorem
+    references live in SpecPack entries, per Erratum E-1). Under the
+    safe-direction rule, distinct classes never satisfy each other.
+    """
 
     cls: str
 
@@ -246,9 +267,32 @@ def contract_meet(a: Contract, b: Contract) -> Contract:
     """Componentwise strongest (v2 §6.1) — the required contract of a producer is
     the meet over its consumers' requirements.
 
-    Raises ``ContractMeetError`` for distinct payloads of the same accuracy
-    class; the weakest element ``⟨D4, A5, ∅⟩`` is the identity and the strongest
-    ``⟨D1, A1, all features⟩`` is absorbing.
+    **This is a partial operation on the full representable ``Contract``
+    domain.** It is undefined (``ContractMeetError``) for equal-rank
+    ``Accuracy`` values with distinct payloads, because the current MVP has no
+    lawful payload ordering: no γ-bound algebra over symbolic ``eps`` tokens, no
+    norm bridge between ``NORMWISE`` and ``COMPONENTWISE`` bounds, no order on
+    backward-stability classes, and no statistical-test-specific comparison
+    semantics. ``contract_meet`` is NOT a total lattice operation over the full
+    representable domain, and definedness itself is not associative: with
+
+        a = ⟨D4, A1, ∅⟩
+        b = ⟨D4, A2("x", norm), ∅⟩
+        c = ⟨D4, A2("y", norm), ∅⟩
+
+    ``contract_meet(contract_meet(a, b), c)`` is defined (A1 outranks both A2
+    payloads) while ``contract_meet(a, contract_meet(b, c))`` cannot be
+    evaluated because ``contract_meet(b, c)`` is undefined. The regression test
+    ``test_meet_definedness_is_not_associative`` pins this.
+
+    Whenever ``contract_meet(a, b)`` *is* defined, it returns the least contract
+    that satisfies both ``a`` and ``b`` under ``Contract.satisfies``, and the
+    universal property
+
+        c.satisfies(contract_meet(a, b)) == (c.satisfies(a) and c.satisfies(b))
+
+    holds for every representable ``c``. The weakest element ``⟨D4, A5, ∅⟩`` is
+    the identity and the strongest ``⟨D1, A1, all features⟩`` is absorbing.
     """
     if type(a) is not Contract or type(b) is not Contract:
         raise TypeError("contract_meet expects two Contracts")
@@ -299,6 +343,15 @@ FAITHFUL_PROFILE: Final = Contract(
     A2BoundedError("classical_gamma", NormKind.COMPONENTWISE),
     exception_profile_features(ExceptionProfile.E2),
 )
+# FAST_PROFILE's accuracy payload "classical" is an opaque placeholder token:
+# the frozen MVP specification names the fast profile as A3 *without* specifying
+# a stability-class payload, and the frozen A3 shape requires one. The token is
+# compared only for equality and is not theorem evidence. Consequence, under the
+# safe-direction compatibility rule: another A3 payload such as "cholesky" does
+# NOT satisfy FAST_PROFILE's "classical" requirement. The policy for matching
+# concrete backward-stability classes against the generic fast profile must be
+# confronted explicitly in the SpecPack/planner tasks (009/010/027), not
+# inferred silently from this placeholder.
 FAST_PROFILE: Final = Contract(
     Determinism.D3_DETERMINISTIC,
     A3BackwardStable("classical"),
