@@ -1,6 +1,12 @@
-"""Public API of the Foundation v1.0 substrate (Tasks 001–003)."""
+"""Public API of the Foundation v1.0 substrate (Tasks 001–004)."""
 
 from mathhpc.foundation.artifact import EMPTY_ARTIFACT, ArtifactRef
+from mathhpc.foundation.claim_state import (
+    ClaimState,
+    Established,
+    Refuted,
+    Unknown,
+)
 from mathhpc.foundation.claims import (
     Claim,
     ClaimKey,
@@ -71,6 +77,12 @@ from mathhpc.foundation.serialize import (
     to_json,
 )
 from mathhpc.foundation.span import SourceSpan
+from mathhpc.foundation.store import (
+    ContestedConflictError,
+    Epoch,
+    FoundationStore,
+    InMemoryFoundationStore,
+)
 
 __all__ = [
     "ANY_VALIDITY",
@@ -83,20 +95,26 @@ __all__ = [
     "Claim",
     "ClaimId",
     "ClaimKey",
+    "ClaimState",
+    "ContestedConflictError",
     "ContractId",
     "ContractNumeric",
     "DataExtent",
     "DecisionId",
+    "Epoch",
     "Equivalence",
+    "Established",
     "EventId",
     "Evidence",
     "EvidenceId",
     "EvidenceStatus",
     "ExceptionProfile",
     "FormallyProved",
+    "FoundationStore",
     "FpFormat",
     "FrozenDict",
     "GuardId",
+    "InMemoryFoundationStore",
     "IntegerExact",
     "MathematicalComplex",
     "MathematicalReal",
@@ -108,6 +126,7 @@ __all__ = [
     "ProgramExtent",
     "Property",
     "PropertyName",
+    "Refuted",
     "RoundingMode",
     "RuntimeChecked",
     "Scope",
@@ -120,6 +139,7 @@ __all__ = [
     "StaticallyDerived",
     "Statement",
     "Universal",
+    "Unknown",
     "Validity",
     "Value",
     "assert_deeply_immutable",
